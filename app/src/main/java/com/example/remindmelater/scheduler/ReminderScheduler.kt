@@ -25,29 +25,45 @@ object ReminderScheduler {
     fun computeRandomTime(
         timeframe: Timeframe,
         comfortStart: Int,
-        comfortEnd: Int
+        comfortEnd: Int,
+        ignoreComfortHours: Boolean = false
     ): Long {
         val now = Calendar.getInstance()
         val cal = Calendar.getInstance()
 
         return when (timeframe) {
             Timeframe.LATER_TODAY -> {
-                val startMinutes = maxOf(
-                    now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE) + 5,
-                    comfortStart * 60
-                )
-                val endMinutes = comfortEnd * 60
-
-                if (startMinutes + 30 >= endMinutes) {
-                    // Too late in the day — schedule for tomorrow in comfort hours
-                    cal.add(Calendar.DAY_OF_YEAR, 1)
-                    val randomMinute = comfortStart * 60 + Random.nextInt((comfortEnd - comfortStart) * 60)
-                    cal.set(Calendar.HOUR_OF_DAY, randomMinute / 60)
-                    cal.set(Calendar.MINUTE, randomMinute % 60)
+                if (ignoreComfortHours) {
+                    // User explicitly accepts an alert outside comfort hours.
+                    // Pick a random time between 30 min and 4 hours from now,
+                    // capped at 23:59 so it still fires today.
+                    val nowMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+                    val latestMinutes = minOf(nowMinutes + 240, 23 * 60 + 59)
+                    val earliest = nowMinutes + 30
+                    val fireMinutes = if (earliest < latestMinutes)
+                        earliest + Random.nextInt(latestMinutes - earliest)
+                    else
+                        earliest // edge case: less than 30 min before midnight
+                    cal.set(Calendar.HOUR_OF_DAY, fireMinutes / 60)
+                    cal.set(Calendar.MINUTE, fireMinutes % 60)
                 } else {
-                    val randomMinute = startMinutes + Random.nextInt(endMinutes - startMinutes)
-                    cal.set(Calendar.HOUR_OF_DAY, randomMinute / 60)
-                    cal.set(Calendar.MINUTE, randomMinute % 60)
+                    val startMinutes = maxOf(
+                        now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE) + 5,
+                        comfortStart * 60
+                    )
+                    val endMinutes = comfortEnd * 60
+
+                    if (startMinutes + 30 >= endMinutes) {
+                        // Too late in the day — schedule for tomorrow in comfort hours
+                        cal.add(Calendar.DAY_OF_YEAR, 1)
+                        val randomMinute = comfortStart * 60 + Random.nextInt((comfortEnd - comfortStart) * 60)
+                        cal.set(Calendar.HOUR_OF_DAY, randomMinute / 60)
+                        cal.set(Calendar.MINUTE, randomMinute % 60)
+                    } else {
+                        val randomMinute = startMinutes + Random.nextInt(endMinutes - startMinutes)
+                        cal.set(Calendar.HOUR_OF_DAY, randomMinute / 60)
+                        cal.set(Calendar.MINUTE, randomMinute % 60)
+                    }
                 }
                 cal.set(Calendar.SECOND, 0)
                 cal.set(Calendar.MILLISECOND, 0)

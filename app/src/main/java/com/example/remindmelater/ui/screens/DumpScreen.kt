@@ -31,6 +31,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,7 +58,10 @@ fun DumpScreen(
 ) {
     var text by remember { mutableStateOf("") }
     var selectedTimeframe by remember { mutableStateOf(Timeframe.NEXT_FEW_DAYS) }
+    var ignoreComfortHours by remember { mutableStateOf(false) }
     var showTimeframeSheet by remember { mutableStateOf(false) }
+    val comfortStart by viewModel.comfortStart.collectAsState()
+    val comfortEnd by viewModel.comfortEnd.collectAsState()
 
     LaunchedEffect(prefillText) {
         if (!prefillText.isNullOrBlank()) {
@@ -93,40 +97,7 @@ fun DumpScreen(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Timing vibe (tap to open sheet)
-            Card(
-                onClick = { showTimeframeSheet = true },
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = "Timing vibe",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = selectedTimeframe.label,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    // Arrow icon removed
-                }
-            }
-
-            // Input text (now second)
+            // Input text (first)
             Card(
                 shape = RoundedCornerShape(28.dp),
                 colors = CardDefaults.cardColors(
@@ -161,8 +132,9 @@ fun DumpScreen(
                         keyboardActions = KeyboardActions(
                             onDone = {
                                 if (canSave) {
-                                    viewModel.addReminder(text, selectedTimeframe)
+                                    viewModel.addReminder(text, selectedTimeframe, ignoreComfortHours)
                                     text = ""
+                                    ignoreComfortHours = false
                                 }
                             }
                         )
@@ -170,10 +142,42 @@ fun DumpScreen(
                 }
             }
 
+            // Timing vibe (tap to open sheet)
+            Card(
+                onClick = { showTimeframeSheet = true },
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "Timing vibe",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = selectedTimeframe.label,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+
             Button(
                 onClick = {
-                    viewModel.addReminder(text, selectedTimeframe)
+                    viewModel.addReminder(text, selectedTimeframe, ignoreComfortHours)
                     text = ""
+                    ignoreComfortHours = false
                 },
                 enabled = canSave,
                 modifier = Modifier
@@ -214,7 +218,12 @@ fun DumpScreen(
     if (showTimeframeSheet) {
         TimeframeSheet(
             selected = selectedTimeframe,
-            onSelected = { selectedTimeframe = it },
+            comfortStart = comfortStart,
+            comfortEnd = comfortEnd,
+            onSelected = { timeframe, ignore ->
+                selectedTimeframe = timeframe
+                ignoreComfortHours = ignore
+            },
             onDismiss = { showTimeframeSheet = false }
         )
     }

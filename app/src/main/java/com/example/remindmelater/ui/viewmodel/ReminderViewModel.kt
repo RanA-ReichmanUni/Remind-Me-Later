@@ -37,12 +37,13 @@ class ReminderViewModel(app: Application) : AndroidViewModel(app) {
     // Reminder operations
     // -------------------------------------------------------------------------
 
-    fun addReminder(text: String, timeframe: Timeframe) {
+    fun addReminder(text: String, timeframe: Timeframe, ignoreComfortHours: Boolean = false) {
         viewModelScope.launch {
             val scheduledAt = ReminderScheduler.computeRandomTime(
                 timeframe,
                 comfortStart.value,
-                comfortEnd.value
+                comfortEnd.value,
+                ignoreComfortHours
             )
             val reminder = Reminder(
                 text       = text.trim(),

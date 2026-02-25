@@ -41,6 +41,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -63,6 +64,7 @@ fun RemindersScreen(
     val comfortStart by viewModel.comfortStart.collectAsState()
     val comfortEnd by viewModel.comfortEnd.collectAsState()
     var showComfortSheet by rememberSaveable { mutableStateOf(false) }
+    var displayCount by rememberSaveable { mutableIntStateOf(10) }
 
     Column(
         modifier = modifier
@@ -88,16 +90,28 @@ fun RemindersScreen(
         if (reminders.isEmpty()) {
             EmptyState(modifier = Modifier.fillMaxSize())
         } else {
+            val visible = reminders.take(displayCount)
+            val hasMore = reminders.size > displayCount
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(reminders, key = { it.id }) { reminder ->
+                items(visible, key = { it.id }) { reminder ->
                     ReminderCard(
                         reminder = reminder,
                         onDone = { viewModel.markDone(reminder.id) },
                         onMove = { updated -> viewModel.updateTimeframe(reminder, updated) }
                     )
+                }
+                if (hasMore) {
+                    item {
+                        TextButton(
+                            onClick = { displayCount += 10 },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Load more (${reminders.size - displayCount} remaining)")
+                        }
+                    }
                 }
                 item { Spacer(Modifier.height(24.dp)) }
             }
