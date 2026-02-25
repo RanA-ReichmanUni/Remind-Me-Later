@@ -42,22 +42,30 @@ fun ComfortHoursSheet(
                 label = "From",
                 hour = start,
                 onDecrease = { if (start > 0) start-- },
-                onIncrease = { if (start < end - 1) start++ }
+                onIncrease = { if (start < 23) start++ }
             )
 
             HourStepper(
                 label = "Until",
                 hour = end,
-                onDecrease = { if (end > start + 1) end-- },
+                onDecrease = { if (end > 0) end-- },
                 onIncrease = { if (end < 23) end++ }
             )
+
+            if (end <= start) {
+                Text(
+                    text = "Spans overnight — comfort window crosses midnight (night shift).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
 
             Button(
                 onClick = { onSave(start, end) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
-                enabled = end > start
+                enabled = end != start
             ) {
                 Text("Save")
             }

@@ -1,4 +1,11 @@
 package com.example.remindmelater.ui.screens
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -11,9 +18,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -22,6 +31,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -45,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import com.example.remindmelater.data.model.Timeframe
 import com.example.remindmelater.ui.components.TimeframeSheet
 import com.example.remindmelater.ui.viewmodel.ReminderViewModel
@@ -60,6 +71,7 @@ fun DumpScreen(
     var selectedTimeframe by remember { mutableStateOf(Timeframe.NEXT_FEW_DAYS) }
     var ignoreComfortHours by remember { mutableStateOf(false) }
     var showTimeframeSheet by remember { mutableStateOf(false) }
+    var showSuccess by remember { mutableStateOf(false) }
     val comfortStart by viewModel.comfortStart.collectAsState()
     val comfortEnd by viewModel.comfortEnd.collectAsState()
 
@@ -70,6 +82,13 @@ fun DumpScreen(
         }
     }
 
+    LaunchedEffect(showSuccess) {
+        if (showSuccess) {
+            delay(1800L)
+            showSuccess = false
+        }
+    }
+
     val canSave = text.isNotBlank()
 
     Column(
@@ -77,20 +96,49 @@ fun DumpScreen(
             .fillMaxSize()
             .background(
                 brush = Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.background,
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    colorStops = arrayOf(
+                        0.00f to MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                        0.30f to MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.30f),
+                        0.60f to MaterialTheme.colorScheme.background,
+                        1.00f to MaterialTheme.colorScheme.background
                     )
                 )
             )
             .systemBarsPadding()
             .padding(horizontal = 18.dp, vertical = 14.dp)
     ) {
-        // ── Title pinned at top ──────────────────────────────────────────────
-        HeroHeader()
-
-        // Pushes controls down to the bottom
-        Spacer(Modifier.weight(1f))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                AnimatedVisibility(
+                    visible = !showSuccess,
+                    enter = fadeIn() + scaleIn(initialScale = 0.92f),
+                    exit  = fadeOut() + scaleOut(targetScale = 0.92f)
+                ) {
+                    HeroHeader()
+                }
+                AnimatedVisibility(
+                    visible = showSuccess,
+                    enter = fadeIn() + scaleIn(
+                        initialScale = 0.5f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness    = Spring.StiffnessMedium
+                        )
+                    ),
+                    exit = fadeOut() + scaleOut(targetScale = 1.1f)
+                ) {
+                    SuccessBadge()
+                }
+            }
+        }
 
         // ── Controls anchored at bottom ──────────────────────────────────────
         Column(
@@ -101,23 +149,34 @@ fun DumpScreen(
             Card(
                 shape = RoundedCornerShape(28.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
                 ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Create,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Create,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(10.dp))
                         Text(
-                            text = "Throw your chaos here",
+                            text = "Dump your chaos here",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -147,16 +206,33 @@ fun DumpScreen(
                 onClick = { showTimeframeSheet = true },
                 shape = RoundedCornerShape(28.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.22f)
                 ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Schedule,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
                             text = "Timing vibe",
@@ -178,6 +254,7 @@ fun DumpScreen(
                     viewModel.addReminder(text, selectedTimeframe, ignoreComfortHours)
                     text = ""
                     ignoreComfortHours = false
+                    showSuccess = true
                 },
                 enabled = canSave,
                 modifier = Modifier
@@ -194,15 +271,15 @@ fun DumpScreen(
                     disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             ) {
-                Icon(Icons.Default.Check, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "Trust me, I'm on it",
+                    text = "Remind Me Later",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = if (canSave) MaterialTheme.colorScheme.onPrimary
                     else MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Default.Check, contentDescription = null)
             }
 
             TextButton(
@@ -230,43 +307,89 @@ fun DumpScreen(
 }
 
 @Composable
-private fun HeroHeader() {
+private fun SuccessBadge() {
     Card(
         shape = RoundedCornerShape(30.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
+            containerColor = MaterialTheme.colorScheme.primaryContainer
         ),
         border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
+            width = 1.5.dp,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(horizontal = 18.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
             Text(
-                text = "REMIND ME LATER",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Dump and forget.",
-                style = MaterialTheme.typography.headlineSmall,
+                text = "Got it!",
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
             )
             Text(
-                text = "We’ll ping you when it's more convenient.",
-                style = MaterialTheme.typography.bodyMedium,
+                text = "We'll remind you later 🤙",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Start
+                textAlign = TextAlign.Center
             )
         }
+    }
+}
+
+@Composable
+private fun HeroHeader() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = "Dump & Forget:",
+            style = MaterialTheme.typography.displaySmall,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.primary,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = "Remind Me Later",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = "We’ll ping you when it’s more convenient.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
     }
 }
 

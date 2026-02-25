@@ -155,7 +155,7 @@ private fun ScreenHeader(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = "REMIND ME LATER",
+                text = "DUMP & FORGET",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
@@ -295,7 +295,7 @@ private fun ReminderCard(
                 ) {
                     Icon(Icons.Default.Notifications, contentDescription = null)
                     Spacer(Modifier.size(6.dp))
-                    Text(if (expanded) "Close" else "Not now")
+                    Text(if (expanded) "Close" else "Delay")
                 }
             }
 

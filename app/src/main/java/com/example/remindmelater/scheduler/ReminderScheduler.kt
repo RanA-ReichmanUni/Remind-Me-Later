@@ -33,36 +33,62 @@ object ReminderScheduler {
 
         return when (timeframe) {
             Timeframe.LATER_TODAY -> {
-                if (ignoreComfortHours) {
-                    // User explicitly accepts an alert outside comfort hours.
-                    // Pick a random time between 30 min and 4 hours from now,
-                    // capped at 23:59 so it still fires today.
-                    val nowMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
-                    val latestMinutes = minOf(nowMinutes + 240, 23 * 60 + 59)
-                    val earliest = nowMinutes + 30
-                    val fireMinutes = if (earliest < latestMinutes)
-                        earliest + Random.nextInt(latestMinutes - earliest)
-                    else
-                        earliest // edge case: less than 30 min before midnight
-                    cal.set(Calendar.HOUR_OF_DAY, fireMinutes / 60)
-                    cal.set(Calendar.MINUTE, fireMinutes % 60)
-                } else {
-                    val startMinutes = maxOf(
-                        now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE) + 5,
-                        comfortStart * 60
-                    )
-                    val endMinutes = comfortEnd * 60
+                val nowMin    = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+                val nightShift = comfortEnd <= comfortStart // window spans midnight
 
-                    if (startMinutes + 30 >= endMinutes) {
-                        // Too late in the day — schedule for tomorrow in comfort hours
-                        cal.add(Calendar.DAY_OF_YEAR, 1)
-                        val randomMinute = comfortStart * 60 + Random.nextInt((comfortEnd - comfortStart) * 60)
-                        cal.set(Calendar.HOUR_OF_DAY, randomMinute / 60)
-                        cal.set(Calendar.MINUTE, randomMinute % 60)
+                if (ignoreComfortHours) {
+                    val toMidnight = 24 * 60 - nowMin
+                    if (!nightShift && toMidnight >= 30) {
+                        // Daytime worker: fire 30 min–4 hrs from now, capped at 23:59
+                        val floor = nowMin + 30
+                        val ceil  = minOf(nowMin + 240, 23 * 60 + 59)
+                        val fire  = if (floor < ceil) floor + Random.nextInt(ceil - floor) else floor
+                        cal.set(Calendar.HOUR_OF_DAY, fire / 60)
+                        cal.set(Calendar.MINUTE, fire % 60)
                     } else {
-                        val randomMinute = startMinutes + Random.nextInt(endMinutes - startMinutes)
-                        cal.set(Calendar.HOUR_OF_DAY, randomMinute / 60)
-                        cal.set(Calendar.MINUTE, randomMinute % 60)
+                        // Night-shift worker OR < 30 min to midnight:
+                        // fire 30–60 min from now; Calendar auto-rolls to next day if needed
+                        cal.add(Calendar.MINUTE, 30 + Random.nextInt(30))
+                    }
+                } else if (!nightShift) {
+                    // Normal daytime comfort window
+                    val startMin = maxOf(nowMin + 5, comfortStart * 60)
+                    val endMin   = comfortEnd * 60
+                    if (startMin + 30 >= endMin) {
+                        cal.add(Calendar.DAY_OF_YEAR, 1)
+                        val r = comfortStart * 60 + Random.nextInt((comfortEnd - comfortStart) * 60)
+                        cal.set(Calendar.HOUR_OF_DAY, r / 60)
+                        cal.set(Calendar.MINUTE, r % 60)
+                    } else {
+                        val r = startMin + Random.nextInt(endMin - startMin)
+                        cal.set(Calendar.HOUR_OF_DAY, r / 60)
+                        cal.set(Calendar.MINUTE, r % 60)
+                    }
+                } else {
+                    // Night-shift: window = [comfortStart*60, 24*60) ∪ [0, comfortEnd*60)
+                    val inWindow  = nowMin >= comfortStart * 60 || nowMin < comfortEnd * 60
+                    val windowLen = (24 - comfortStart) * 60 + comfortEnd * 60
+                    val nowLinear = if (nowMin >= comfortStart * 60)
+                        nowMin - comfortStart * 60
+                    else
+                        (24 - comfortStart) * 60 + nowMin
+                    val floorLinear = nowLinear + 5
+
+                    if (!inWindow || floorLinear + 30 >= windowLen) {
+                        // Outside window or near end — push to next window start
+                        if (comfortStart * 60 > nowMin)
+                            cal.set(Calendar.HOUR_OF_DAY, comfortStart)
+                        else {
+                            cal.add(Calendar.DAY_OF_YEAR, 1)
+                            cal.set(Calendar.HOUR_OF_DAY, comfortStart)
+                        }
+                        cal.set(Calendar.MINUTE, Random.nextInt(60))
+                    } else {
+                        val r      = floorLinear + Random.nextInt(windowLen - floorLinear)
+                        val absMin = (comfortStart * 60 + r) % (24 * 60)
+                        if (absMin < nowMin) cal.add(Calendar.DAY_OF_YEAR, 1)
+                        cal.set(Calendar.HOUR_OF_DAY, absMin / 60)
+                        cal.set(Calendar.MINUTE, absMin % 60)
                     }
                 }
                 cal.set(Calendar.SECOND, 0)
@@ -71,9 +97,15 @@ object ReminderScheduler {
             }
 
             else -> {
-                val daysToAdd = timeframe.minDays + Random.nextInt(timeframe.maxDays - timeframe.minDays + 1)
+                val daysToAdd  = timeframe.minDays + Random.nextInt(timeframe.maxDays - timeframe.minDays + 1)
                 cal.add(Calendar.DAY_OF_YEAR, daysToAdd)
-                val randomHour = comfortStart + Random.nextInt(comfortEnd - comfortStart)
+                val nightShift = comfortEnd <= comfortStart
+                val randomHour = if (!nightShift) {
+                    comfortStart + Random.nextInt(comfortEnd - comfortStart)
+                } else {
+                    // Night-shift: pick from [comfortStart, 24) ∪ [0, comfortEnd)
+                    (comfortStart + Random.nextInt((24 - comfortStart) + comfortEnd)) % 24
+                }
                 val randomMinute = Random.nextInt(60)
                 cal.set(Calendar.HOUR_OF_DAY, randomHour)
                 cal.set(Calendar.MINUTE, randomMinute)

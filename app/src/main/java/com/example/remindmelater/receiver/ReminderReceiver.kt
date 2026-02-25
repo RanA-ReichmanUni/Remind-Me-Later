@@ -49,7 +49,7 @@ class ReminderReceiver : BroadcastReceiver() {
                 CHANNEL_NAME,
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Remind Me Later reminders"
+                description = "Dump & Forget reminders"
                 enableVibration(true)
             }
             nm.createNotificationChannel(channel)

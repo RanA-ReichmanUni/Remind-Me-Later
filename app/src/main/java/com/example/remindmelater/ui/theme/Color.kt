@@ -3,7 +3,7 @@ package com.example.remindmelater.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // ── Light scheme ─────────────────────────────────────────────────────────────
-val PlumPrimary        = Color(0xFF1E4FA9)   // deep cobalt blue
+val PlumPrimary        = Color(0xFF17408A)   // deeper cobalt blue
 val PlumOnPrimary      = Color(0xFFFFFFFF)
 val PlumContainer      = Color(0xFFDDE8FF)   // misty blue tint
 val PlumOnContainer    = Color(0xFF0C2A63)

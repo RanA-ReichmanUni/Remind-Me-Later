@@ -88,37 +88,50 @@ fun TimeframeSheet(
 
 /** Returns true when outside comfort hours entirely, or < 30 min before comfort end. */
 private fun isOutsideOrNearComfortEnd(comfortStart: Int, comfortEnd: Int): Boolean {
-    val cal = Calendar.getInstance()
-    val nowMinutes = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
-    val beforeStart = nowMinutes < comfortStart * 60
-    val afterEnd    = nowMinutes >= comfortEnd * 60
-    val nearEnd     = !afterEnd && (comfortEnd * 60 - nowMinutes) < 30
-    return beforeStart || afterEnd || nearEnd
+    val cal    = Calendar.getInstance()
+    val nowMin = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
+    return if (comfortEnd > comfortStart) {
+        // Normal daytime window
+        nowMin < comfortStart * 60 || nowMin >= comfortEnd * 60 || (comfortEnd * 60 - nowMin) < 30
+    } else {
+        // Night-shift: window = [comfortStart, 24) ∪ [0, comfortEnd)
+        val inWindow = nowMin >= comfortStart * 60 || nowMin < comfortEnd * 60
+        if (!inWindow) return true
+        val minsToEnd = if (nowMin >= comfortStart * 60)
+            (24 * 60 - nowMin) + comfortEnd * 60   // night portion; end is past midnight
+        else
+            comfortEnd * 60 - nowMin               // morning portion
+        minsToEnd < 30
+    }
 }
 
 private fun buildWarningMessage(comfortStart: Int, comfortEnd: Int): String {
-    val cal = Calendar.getInstance()
-    val nowMinutes = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
+    val cal        = Calendar.getInstance()
+    val nowMin     = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
+    val nightShift = comfortEnd <= comfortStart
+
+    // Night-shift: inside window but near end
+    if (nightShift && (nowMin >= comfortStart * 60 || nowMin < comfortEnd * 60)) {
+        val remaining = if (nowMin >= comfortStart * 60)
+            (24 * 60 - nowMin) + comfortEnd * 60
+        else
+            comfortEnd * 60 - nowMin
+        return "Only $remaining minute${if (remaining == 1) "" else "s"} left in your overnight comfort window. " +
+                "Send it before your window closes, or push it to tonight?"
+    }
 
     return when {
-        // Before comfort hours start for the day
-        nowMinutes < comfortStart * 60 -> {
-            val h12 = comfortStart.to12h()
-            "Your comfort hours haven't kicked in yet — they start at $h12. " +
-                    "Want this alert to fire outside your quiet window anyway?"
-        }
-        // After comfort hours have already ended
-        nowMinutes >= comfortEnd * 60 -> {
-            val h12 = comfortEnd.to12h()
-            "You're currently outside your comfort hours — they ended at $h12 today. " +
-                    "Send the alert today anyway, or reschedule it for tomorrow morning?"
-        }
-        // Still inside, but fewer than 30 minutes left
+        nowMin < comfortStart * 60 ->
+            "Your comfort hours haven't kicked in yet — they start at ${comfortStart.to12h()}. " +
+            "Want this alert to fire outside your quiet window anyway?"
+        nowMin >= comfortEnd * 60 ->
+            "You're currently outside your comfort hours — they ended at ${comfortEnd.to12h()} today. " +
+            "Send the alert today anyway, or reschedule it for tomorrow morning?"
         else -> {
-            val remaining = comfortEnd * 60 - nowMinutes
+            val remaining = comfortEnd * 60 - nowMin
             "Only $remaining minute${if (remaining == 1) "" else "s"} left in your comfort window. " +
-                    "The reminder might arrive right as your quiet time starts. " +
-                    "Send it today anyway, or push it to tomorrow morning?"
+            "The reminder might arrive right as your quiet time starts. " +
+            "Send it today anyway, or push it to tomorrow morning?"
         }
     }
 }
