@@ -95,19 +95,12 @@ private fun TimeframeTile(
         animationSpec = spring(dampingRatio = 0.72f, stiffness = 560f),
         label = "tileScale"
     )
-    val tilt = when (timeframe) {
-        Timeframe.LATER_TODAY -> -1.2f
-        Timeframe.NEXT_FEW_DAYS -> 0.8f
-        Timeframe.NEXT_WEEKS -> -0.6f
-        Timeframe.NEXT_MONTH -> 1.0f
-    }
 
     Column(
         modifier = modifier
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
-                rotationZ = if (selected) 0f else tilt
             }
             .clip(RoundedCornerShape(22.dp))
             .background(container)

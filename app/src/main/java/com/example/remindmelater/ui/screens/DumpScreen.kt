@@ -2,6 +2,7 @@ package com.example.remindmelater.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -11,23 +12,24 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Create
@@ -52,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -93,44 +96,31 @@ fun DumpScreen(
 
     val canSave = text.isNotBlank()
 
-    Column(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .systemBarsPadding()
-            .padding(horizontal = 18.dp, vertical = 14.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                AnimatedVisibility(
-                    visible = showSuccess,
-                    enter = fadeIn() + scaleIn(
-                        initialScale = 0.5f,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness    = Spring.StiffnessMedium
-                        )
-                    ),
-                    exit = fadeOut() + scaleOut(targetScale = 1.1f)
-                ) {
-                    SuccessBadge()
-                }
-            }
-        }
+        // squeeze: 1.0 on generous screens (≥720dp), 0.0 on tight screens (≤520dp).
+        // Only paddings and the text-field shrink — preserves proportions when room exists.
+        val squeeze = ((maxHeight.value - 520f) / 200f).coerceIn(0f, 1f)
 
-        // ── Controls anchored at bottom ──────────────────────────────────────
+        val titleVertPad    = (14 + 8 * squeeze).dp   // 14..22
+        val subtitleGap     = (6 + 10 * squeeze).dp    // 6..16
+        val preDividerGap   = (8 + 12 * squeeze).dp    // 8..20
+        val inputVertPad    = (12 + 8 * squeeze).dp     // 12..20
+        val interCardGap    = (8 + 8 * squeeze).dp      // 8..16
+        val buttonHeight    = (48 + 10 * squeeze).dp    // 48..58
+        val textFieldHeight = (56 + 64 * squeeze).dp    // 56..120
+
         Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 18.dp, vertical = 14.dp)
         ) {
+            Spacer(Modifier.weight(3f))
+
             // ── Hero title tile + input, visually fused ──────────────────
             Card(
                 shape = RoundedCornerShape(28.dp),
@@ -144,7 +134,7 @@ fun DumpScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 22.dp),
+                            .padding(horizontal = 20.dp, vertical = titleVertPad),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
@@ -162,16 +152,16 @@ fun DumpScreen(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
                             textAlign = TextAlign.Center
                         )
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(subtitleGap))
                         Text(
-                            text = "We’ll ping you later, when it’s more convenient.",
+                            text = "We'll ping you later, when it's more convenient.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
                     }
 
-                    Spacer(Modifier.height(20.dp))
+                    Spacer(Modifier.height(preDividerGap))
                     HorizontalDivider(
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
                         thickness = 1.dp
@@ -181,9 +171,8 @@ fun DumpScreen(
                     // Input section
                     Column(
                         modifier = Modifier
-                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0f))
-                            .padding(horizontal = 16.dp, vertical = 20.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                            .padding(horizontal = 16.dp, vertical = inputVertPad),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
@@ -213,7 +202,7 @@ fun DumpScreen(
                         ChaosPad(
                             value = text,
                             onValueChange = { text = it },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().height(textFieldHeight),
                             placeholder = "What's on your mind?",
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(
@@ -226,11 +215,12 @@ fun DumpScreen(
                                 }
                             )
                         )
-                         Spacer(Modifier.width(8.dp))
                     }
                 }
             }
-            Spacer(Modifier.width(10.dp))
+
+            Spacer(Modifier.weight(1f).heightIn(min = interCardGap))
+
             // Timing vibe (tap to open sheet)
             Card(
                 onClick = { showTimeframeSheet = true },
@@ -278,7 +268,9 @@ fun DumpScreen(
                     }
                 }
             }
-            Spacer(Modifier.width(10.dp))
+
+            Spacer(Modifier.weight(2f).heightIn(min = interCardGap))
+              Spacer(Modifier.weight(2f).heightIn(min = interCardGap))
             Button(
                 onClick = {
                     viewModel.addReminder(text, selectedTimeframe, ignoreComfortHours)
@@ -289,7 +281,7 @@ fun DumpScreen(
                 enabled = canSave,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(58.dp),
+                    .height(buttonHeight),
                 shape = RoundedCornerShape(20.dp),
                 elevation = ButtonDefaults.buttonElevation(
                     defaultElevation = 8.dp,
@@ -319,6 +311,32 @@ fun DumpScreen(
                 enabled = text.isNotEmpty()
             ) {
                 Text("Clear draft")
+            }
+              Spacer(Modifier.weight(2f).heightIn(min = interCardGap))
+        }
+    }
+
+    // ── Full-screen success popup overlay ─────────────────────────────────
+    AnimatedVisibility(
+        visible = showSuccess,
+        modifier = Modifier.fillMaxSize(),
+        enter = fadeIn(tween(150)) + scaleIn(
+            initialScale = 0.7f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness    = Spring.StiffnessMedium
+            )
+        ),
+        exit = fadeOut(tween(200)) + scaleOut(targetScale = 0.92f)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.50f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(modifier = Modifier.padding(horizontal = 36.dp)) {
+                SuccessBadge()
             }
         }
     }
@@ -423,7 +441,7 @@ private fun ChaosPad(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(132.dp)
+                    .fillMaxHeight()
                     .padding(horizontal = 14.dp, vertical = 12.dp)
             ) {
                 if (value.isBlank()) {
