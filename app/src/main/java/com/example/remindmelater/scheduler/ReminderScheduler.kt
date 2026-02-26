@@ -127,7 +127,29 @@ object ReminderScheduler {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, reminder.scheduledAt, pi)
+
+        // setAlarmClock() is the ONLY AlarmManager method that grants the receiving
+        // app a background-activity-start exemption on Android 10+. Without it,
+        // context.startActivity() from a BroadcastReceiver is silently blocked and
+        // only the notification heads-up shows. The "showIntent" is shown in the
+        // system clock / status-bar; opening MainActivity is correct here.
+        val showPi = PendingIntent.getActivity(
+            context,
+            (reminder.id + 100_000L).toInt(),
+            Intent().apply {
+                setClassName(context, "com.example.remindmelater.MainActivity")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            },
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        try {
+            am.setAlarmClock(AlarmManager.AlarmClockInfo(reminder.scheduledAt, showPi), pi)
+        } catch (e: SecurityException) {
+            // Exact alarm permission not granted — fall back to inexact.
+            // Full-screen launch won't work in this path, but the notification will.
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, reminder.scheduledAt, pi)
+        }
     }
 
     fun cancel(context: Context, reminderId: Long) {

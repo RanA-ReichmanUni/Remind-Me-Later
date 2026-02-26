@@ -2,6 +2,10 @@ package com.example.remindmelater.ui.screens
 
 import android.app.NotificationManager
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.Ringtone
+import android.media.RingtoneManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -19,7 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.remindmelater.MainActivity
 import com.example.remindmelater.receiver.NotificationActionReceiver
 import com.example.remindmelater.scheduler.ReminderScheduler
 import com.example.remindmelater.ui.theme.RemindMeLaterTheme
@@ -29,6 +32,8 @@ class AlarmActivity : ComponentActivity() {
     companion object {
         const val EXTRA_REMINDER_TEXT = "reminder_text"
     }
+
+    private var ringtone: Ringtone? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,38 +46,63 @@ class AlarmActivity : ComponentActivity() {
         val nm = getSystemService(NotificationManager::class.java)
         nm.cancel(reminderId.toInt())
 
+        // Play the default alarm ringtone
+        val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        ringtone = RingtoneManager.getRingtone(this, alarmUri)?.also { r ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                r.isLooping = true
+            }
+            r.audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+            r.play()
+        }
+
         setContent {
             RemindMeLaterTheme {
                 AlarmScreen(
-                    reminderText        = reminderText,
-                    onDone              = {
+                    reminderText         = reminderText,
+                    onDone               = {
+                        ringtone?.stop()
                         sendAction(NotificationActionReceiver.ACTION_DONE, reminderId)
                         finish()
                     },
-                    onSnoozeLaterToday  = {
+                    onSnoozeLaterToday   = {
+                        ringtone?.stop()
                         sendAction(NotificationActionReceiver.ACTION_SNOOZE_LATER_TODAY, reminderId)
                         finish()
                     },
-                    onSnoozeTomorrow    = {
+                    onSnoozeTomorrow     = {
+                        ringtone?.stop()
                         sendAction(NotificationActionReceiver.ACTION_SNOOZE_TOMORROW, reminderId)
                         finish()
                     },
-                    onSnoozeReRandomize = {
-                        sendAction(NotificationActionReceiver.ACTION_SNOOZE_RERANDOMIZE, reminderId)
+                    onSnoozeNextFewDays  = {
+                        ringtone?.stop()
+                        sendAction(NotificationActionReceiver.ACTION_SNOOZE_NEXT_FEW_DAYS, reminderId)
                         finish()
                     },
-                    onReschedule = {
-                        val mainIntent = Intent(this, MainActivity::class.java).apply {
-                            flags  = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                            action = NotificationActionReceiver.ACTION_RESCHEDULE
-                            putExtra(ReminderScheduler.EXTRA_REMINDER_ID, reminderId)
-                        }
-                        startActivity(mainIntent)
+                    onSnoozeNextWeeks    = {
+                        ringtone?.stop()
+                        sendAction(NotificationActionReceiver.ACTION_SNOOZE_NEXT_WEEKS, reminderId)
+                        finish()
+                    },
+                    onSnoozeNextMonth    = {
+                        ringtone?.stop()
+                        sendAction(NotificationActionReceiver.ACTION_SNOOZE_NEXT_MONTH, reminderId)
                         finish()
                     }
                 )
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        ringtone?.stop()
+        ringtone = null
     }
 
     private fun sendAction(action: String, reminderId: Long) {
@@ -90,8 +120,9 @@ private fun AlarmScreen(
     onDone: () -> Unit,
     onSnoozeLaterToday: () -> Unit,
     onSnoozeTomorrow: () -> Unit,
-    onSnoozeReRandomize: () -> Unit,
-    onReschedule: () -> Unit
+    onSnoozeNextFewDays: () -> Unit,
+    onSnoozeNextWeeks: () -> Unit,
+    onSnoozeNextMonth: () -> Unit
 ) {
     var showSnoozeOptions by remember { mutableStateOf(false) }
 
@@ -101,6 +132,31 @@ private fun AlarmScreen(
             .background(MaterialTheme.colorScheme.background)
             .systemBarsPadding()
     ) {
+        // App title — pinned to top
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
+                .padding(horizontal = 24.dp, vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "Dump & Forget:",
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "Remind Me Later",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                textAlign = TextAlign.Center
+            )
+        }
+
         // Bell icon + Reminder text — centred on screen
         Column(
             modifier = Modifier
@@ -163,9 +219,11 @@ private fun AlarmScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 10.dp)
                         )
-                        SnoozeRow("⚡ Later today",  onSnoozeLaterToday)
-                        SnoozeRow("🌤 Tomorrow",     onSnoozeTomorrow)
-                        SnoozeRow("🔀 Re-randomize", onSnoozeReRandomize)
+                        SnoozeRow("⚡ Later today",   onSnoozeLaterToday)
+                        SnoozeRow("🌅 Tomorrow",       onSnoozeTomorrow)
+                        SnoozeRow("🌤 Next few days",  onSnoozeNextFewDays)
+                        SnoozeRow("🌙 Next weeks",     onSnoozeNextWeeks)
+                        SnoozeRow("🌊 Next month",     onSnoozeNextMonth)
                         Spacer(Modifier.height(4.dp))
                     }
                 }
@@ -197,13 +255,7 @@ private fun AlarmScreen(
                 }
             }
 
-            TextButton(onClick = onReschedule) {
-                Text(
-                    "↺  Reschedule with a new timeframe",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+
         }
     }
 }

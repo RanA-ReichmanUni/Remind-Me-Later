@@ -34,12 +34,14 @@ import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
@@ -94,16 +96,7 @@ fun DumpScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colorStops = arrayOf(
-                        0.00f to MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
-                        0.30f to MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.30f),
-                        0.60f to MaterialTheme.colorScheme.background,
-                        1.00f to MaterialTheme.colorScheme.background
-                    )
-                )
-            )
+            .background(MaterialTheme.colorScheme.background)
             .systemBarsPadding()
             .padding(horizontal = 18.dp, vertical = 14.dp)
     ) {
@@ -117,13 +110,6 @@ fun DumpScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                AnimatedVisibility(
-                    visible = !showSuccess,
-                    enter = fadeIn() + scaleIn(initialScale = 0.92f),
-                    exit  = fadeOut() + scaleOut(targetScale = 0.92f)
-                ) {
-                    HeroHeader()
-                }
                 AnimatedVisibility(
                     visible = showSuccess,
                     enter = fadeIn() + scaleIn(
@@ -145,62 +131,106 @@ fun DumpScreen(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Input text (first)
+            // ── Hero title tile + input, visually fused ──────────────────
             Card(
                 shape = RoundedCornerShape(28.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .background(
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                    shape = CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Create,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                        Spacer(Modifier.width(10.dp))
+                Column {
+                    // Title section
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 22.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
                         Text(
-                            text = "Dump your chaos here",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            text = "Dump & Forget:",
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = "Remind Me Later",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            text = "We’ll ping you later, when it’s more convenient.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
                         )
                     }
 
-                    ChaosPad(
-                        value = text,
-                        onValueChange = { text = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = "What's on your mind?",
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(
-                            onDone = {
-                                if (canSave) {
-                                    viewModel.addReminder(text, selectedTimeframe, ignoreComfortHours)
-                                    text = ""
-                                    ignoreComfortHours = false
-                                }
-                            }
-                        )
+                    Spacer(Modifier.height(20.dp))
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                        thickness = 1.dp
                     )
+                    Spacer(Modifier.height(8.dp))
+
+                    // Input section
+                    Column(
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0f))
+                            .padding(horizontal = 16.dp, vertical = 20.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                        shape = CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Create,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                text = "Dump your chaos here",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        ChaosPad(
+                            value = text,
+                            onValueChange = { text = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = "What's on your mind?",
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    if (canSave) {
+                                        viewModel.addReminder(text, selectedTimeframe, ignoreComfortHours)
+                                        text = ""
+                                        ignoreComfortHours = false
+                                    }
+                                }
+                            )
+                        )
+                         Spacer(Modifier.width(8.dp))
+                    }
                 }
             }
-
+            Spacer(Modifier.width(10.dp))
             // Timing vibe (tap to open sheet)
             Card(
                 onClick = { showTimeframeSheet = true },
@@ -248,7 +278,7 @@ fun DumpScreen(
                     }
                 }
             }
-
+            Spacer(Modifier.width(10.dp))
             Button(
                 onClick = {
                     viewModel.addReminder(text, selectedTimeframe, ignoreComfortHours)
@@ -281,6 +311,7 @@ fun DumpScreen(
                 Spacer(Modifier.width(8.dp))
                 Icon(Icons.Default.Check, contentDescription = null)
             }
+
 
             TextButton(
                 onClick = { text = "" },
@@ -357,39 +388,6 @@ private fun SuccessBadge() {
                 textAlign = TextAlign.Center
             )
         }
-    }
-}
-
-@Composable
-private fun HeroHeader() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Text(
-            text = "Dump & Forget:",
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.ExtraBold,
-            color = MaterialTheme.colorScheme.primary,
-            textAlign = TextAlign.Center
-        )
-        Text(
-            text = "Remind Me Later",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = "We’ll ping you when it’s more convenient.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
     }
 }
 

@@ -14,15 +14,19 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.util.Calendar
+import kotlin.random.Random
 
 class NotificationActionReceiver : BroadcastReceiver() {
 
     companion object {
-        const val ACTION_DONE              = "com.example.remindmelater.ACTION_DONE"
-        const val ACTION_SNOOZE_LATER_TODAY = "com.example.remindmelater.ACTION_SNOOZE_LATER_TODAY"
-        const val ACTION_SNOOZE_TOMORROW   = "com.example.remindmelater.ACTION_SNOOZE_TOMORROW"
-        const val ACTION_SNOOZE_RERANDOMIZE = "com.example.remindmelater.ACTION_SNOOZE_RERANDOMIZE"
-        const val ACTION_RESCHEDULE        = "com.example.remindmelater.ACTION_RESCHEDULE"
+        const val ACTION_DONE               = "com.example.remindmelater.ACTION_DONE"
+        const val ACTION_SNOOZE_LATER_TODAY  = "com.example.remindmelater.ACTION_SNOOZE_LATER_TODAY"
+        const val ACTION_SNOOZE_TOMORROW     = "com.example.remindmelater.ACTION_SNOOZE_TOMORROW"
+        const val ACTION_SNOOZE_NEXT_FEW_DAYS = "com.example.remindmelater.ACTION_SNOOZE_NEXT_FEW_DAYS"
+        const val ACTION_SNOOZE_NEXT_WEEKS   = "com.example.remindmelater.ACTION_SNOOZE_NEXT_WEEKS"
+        const val ACTION_SNOOZE_NEXT_MONTH   = "com.example.remindmelater.ACTION_SNOOZE_NEXT_MONTH"
+        const val ACTION_RESCHEDULE          = "com.example.remindmelater.ACTION_RESCHEDULE"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -51,12 +55,22 @@ class NotificationActionReceiver : BroadcastReceiver() {
                     }
 
                     ACTION_SNOOZE_TOMORROW -> {
+                        snoozeTomorrow(context, db, settings, reminder)
+                        nm.cancel(reminderId.toInt())
+                    }
+
+                    ACTION_SNOOZE_NEXT_FEW_DAYS -> {
                         snooze(context, db, settings, reminder, Timeframe.NEXT_FEW_DAYS)
                         nm.cancel(reminderId.toInt())
                     }
 
-                    ACTION_SNOOZE_RERANDOMIZE -> {
-                        snooze(context, db, settings, reminder, reminder.timeframe)
+                    ACTION_SNOOZE_NEXT_WEEKS -> {
+                        snooze(context, db, settings, reminder, Timeframe.NEXT_WEEKS)
+                        nm.cancel(reminderId.toInt())
+                    }
+
+                    ACTION_SNOOZE_NEXT_MONTH -> {
+                        snooze(context, db, settings, reminder, Timeframe.NEXT_MONTH)
                         nm.cancel(reminderId.toInt())
                     }
 
@@ -86,6 +100,37 @@ class NotificationActionReceiver : BroadcastReceiver() {
             timeframe = newTimeframe,
             scheduledAt = newTime,
             status = ReminderStatus.PENDING
+        )
+        db.reminderDao().update(updated)
+        ReminderScheduler.schedule(context, updated)
+    }
+
+    /** Schedules exactly tomorrow at a random hour within comfort window. */
+    private suspend fun snoozeTomorrow(
+        context: Context,
+        db: ReminderDatabase,
+        settings: SettingsDataStore,
+        reminder: Reminder
+    ) {
+        ReminderScheduler.cancel(context, reminder.id)
+        val comfortStart = settings.comfortStart.first()
+        val comfortEnd   = settings.comfortEnd.first()
+        val hour = if (comfortEnd > comfortStart) {
+            comfortStart + Random.nextInt(comfortEnd - comfortStart)
+        } else {
+            (comfortStart + Random.nextInt((24 - comfortStart) + comfortEnd)) % 24
+        }
+        val cal = Calendar.getInstance().apply {
+            add(Calendar.DAY_OF_YEAR, 1)
+            set(Calendar.HOUR_OF_DAY, hour)
+            set(Calendar.MINUTE, Random.nextInt(60))
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val updated = reminder.copy(
+            timeframe   = Timeframe.NEXT_FEW_DAYS,
+            scheduledAt = cal.timeInMillis,
+            status      = ReminderStatus.PENDING
         )
         db.reminderDao().update(updated)
         ReminderScheduler.schedule(context, updated)

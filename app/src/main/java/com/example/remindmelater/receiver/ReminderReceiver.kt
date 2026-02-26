@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.example.remindmelater.R
 import com.example.remindmelater.data.ReminderDatabase
@@ -42,7 +43,20 @@ class ReminderReceiver : BroadcastReceiver() {
     private fun showAlarmNotification(context: Context, reminderId: Long, text: String) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Ensure channel exists
+        // ── 1. Launch AlarmActivity directly (alarm-clock pattern) ──────────
+        // setExactAndAllowWhileIdle grants a brief activity-start exemption;
+        // this is the most reliable way to show a full-screen alarm on
+        // Android 10+, regardless of USE_FULL_SCREEN_INTENT status.
+        val alarmActivityIntent = Intent(context, AlarmActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(ReminderScheduler.EXTRA_REMINDER_ID, reminderId)
+            putExtra(AlarmActivity.EXTRA_REMINDER_TEXT, text)
+        }
+        context.startActivity(alarmActivityIntent)
+
+        // ── 2. Also post a notification (shown in shade / seen when screen on) ──
         if (nm.getNotificationChannel(CHANNEL_ID) == null) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
@@ -55,20 +69,13 @@ class ReminderReceiver : BroadcastReceiver() {
             nm.createNotificationChannel(channel)
         }
 
-        // Full-screen intent → AlarmActivity
-        val fullScreenIntent = Intent(context, AlarmActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra(ReminderScheduler.EXTRA_REMINDER_ID, reminderId)
-            putExtra(AlarmActivity.EXTRA_REMINDER_TEXT, text)
-        }
         val fullScreenPi = PendingIntent.getActivity(
             context,
             reminderId.toInt(),
-            fullScreenIntent,
+            alarmActivityIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Done action
         val doneIntent = Intent(context, NotificationActionReceiver::class.java).apply {
             action = NotificationActionReceiver.ACTION_DONE
             putExtra(ReminderScheduler.EXTRA_REMINDER_ID, reminderId)
@@ -77,6 +84,17 @@ class ReminderReceiver : BroadcastReceiver() {
             context,
             (reminderId * 10 + 1).toInt(),
             doneIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val snoozeIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+            action = NotificationActionReceiver.ACTION_SNOOZE_LATER_TODAY
+            putExtra(ReminderScheduler.EXTRA_REMINDER_ID, reminderId)
+        }
+        val snoozePi = PendingIntent.getBroadcast(
+            context,
+            (reminderId * 10 + 2).toInt(),
+            snoozeIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -89,6 +107,7 @@ class ReminderReceiver : BroadcastReceiver() {
             .setFullScreenIntent(fullScreenPi, true)
             .setAutoCancel(true)
             .addAction(0, "✓ Done", donePi)
+            .addAction(0, "💤 Snooze", snoozePi)
             .setContentIntent(fullScreenPi)
             .build()
 

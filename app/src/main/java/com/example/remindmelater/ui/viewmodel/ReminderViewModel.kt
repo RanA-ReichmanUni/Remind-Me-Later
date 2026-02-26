@@ -80,6 +80,20 @@ class ReminderViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** TODO: REMOVE BEFORE RELEASE — fires reminder in exactly 1 minute */
+    fun scheduleInOneMinute(text: String) {
+        viewModelScope.launch {
+            val scheduledAt = System.currentTimeMillis() + 60_000L
+            val reminder = Reminder(
+                text        = text.trim().ifBlank { "Test reminder" },
+                timeframe   = Timeframe.LATER_TODAY,
+                scheduledAt = scheduledAt
+            )
+            val id = repository.insert(reminder)
+            ReminderScheduler.schedule(getApplication(), reminder.copy(id = id))
+        }
+    }
+
     fun markDone(reminderId: Long) {
         viewModelScope.launch {
             ReminderScheduler.cancel(getApplication(), reminderId)
