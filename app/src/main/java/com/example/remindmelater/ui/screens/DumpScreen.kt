@@ -312,7 +312,20 @@ fun DumpScreen(
             ) {
                 Text("Clear draft")
             }
-              Spacer(Modifier.weight(2f).heightIn(min = interCardGap))
+
+            // TODO: Test Button, REMOVE BEFORE RELEASE
+            OutlinedButton(
+                onClick = { viewModel.scheduleInOneMinute(text.ifBlank { "Test reminder" }) },
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+                border = BorderStroke(1.dp, Color(0xFFFF6B00).copy(alpha = 0.6f)),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = Color(0xFFFF6B00)
+                )
+            ) {
+                Text("⚡ Test: fire in 1 min", style = MaterialTheme.typography.labelMedium)
+            }
+
+            Spacer(Modifier.weight(2f).heightIn(min = interCardGap))
         }
     }
 
