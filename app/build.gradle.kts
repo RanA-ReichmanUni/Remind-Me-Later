@@ -3,14 +3,15 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.google.services)
 }
 
 android {
-    namespace = "com.example.remindmelater"
+    namespace = "com.impactdevelopment.remindmelater"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.remindmelater"
+        applicationId = "com.impactdevelopment.remindmelater"
         minSdk = 29
         targetSdk = 36
         versionCode = 1
@@ -37,6 +38,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -60,6 +62,10 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     // ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    // Firebase Remote Config + Play In-App Updates
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.config.ktx)
+    implementation(libs.play.app.update.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

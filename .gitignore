@@ -13,3 +13,5 @@
 .externalNativeBuild
 .cxx
 local.properties
+# Firebase config - keep out of source control
+app/google-services.json
