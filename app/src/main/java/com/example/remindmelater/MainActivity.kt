@@ -40,6 +40,7 @@ import com.example.remindmelater.scheduler.ReminderScheduler
 import com.example.remindmelater.ui.components.ComfortHoursSheet
 import com.example.remindmelater.ui.screens.DumpScreen
 import com.example.remindmelater.ui.screens.RemindersScreen
+import com.example.remindmelater.ui.screens.TermsAndConditionsScreen
 import com.example.remindmelater.ui.theme.RemindMeLaterTheme
 import com.example.remindmelater.ui.viewmodel.ReminderViewModel
 
@@ -78,6 +79,7 @@ class MainActivity : ComponentActivity() {
                 val hasOnboarded by vm.hasOnboarded.collectAsState()
                 val comfortStart by vm.comfortStart.collectAsState()
                 val comfortEnd   by vm.comfortEnd.collectAsState()
+                val termsAccepted by vm.termsAccepted.collectAsState()
 
                 var selectedTab by remember { mutableStateOf(Tab.DUMP) }
                 var prefillText by remember { mutableStateOf<String?>(null) }
@@ -91,8 +93,13 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                // Onboarding: if first launch, show comfort hours sheet before anything else
-                if (!hasOnboarded) {
+                if (!termsAccepted) {
+                    TermsAndConditionsScreen(
+                        onAgree = { vm.acceptTerms() },
+                        onCancel = { finish() }
+                    )
+                } else if (!hasOnboarded) {
+                    // Onboarding: if first launch, show comfort hours sheet before anything else
                     ComfortHoursSheet(
                         initialStart = comfortStart,
                         initialEnd   = comfortEnd,
@@ -100,28 +107,28 @@ class MainActivity : ComponentActivity() {
                         onSave       = { s, e -> vm.saveComfortHours(s, e) }
                     )
                 } else {
-                Scaffold(
-                    bottomBar = {
-                        PremiumBottomBar(
-                            selectedTab = selectedTab,
-                            onTabSelected = { selectedTab = it }
-                        )
-                    }
-                ) { innerPadding ->
-                    when (selectedTab) {
-                        Tab.DUMP -> DumpScreen(
-                            viewModel        = vm,
-                            prefillText      = prefillText,
-                            onPrefillConsumed = { prefillText = null },
-                            modifier         = Modifier.padding(innerPadding)
-                        )
-                        Tab.REMINDERS -> RemindersScreen(
-                            viewModel = vm,
-                            modifier  = Modifier.padding(innerPadding)
-                        )
+                    Scaffold(
+                        bottomBar = {
+                            PremiumBottomBar(
+                                selectedTab = selectedTab,
+                                onTabSelected = { selectedTab = it }
+                            )
+                        }
+                    ) { innerPadding ->
+                        when (selectedTab) {
+                            Tab.DUMP -> DumpScreen(
+                                viewModel        = vm,
+                                prefillText      = prefillText,
+                                onPrefillConsumed = { prefillText = null },
+                                modifier         = Modifier.padding(innerPadding)
+                            )
+                            Tab.REMINDERS -> RemindersScreen(
+                                viewModel = vm,
+                                modifier  = Modifier.padding(innerPadding)
+                            )
+                        }
                     }
                 }
-                } // end if/else hasOnboarded
             }
         }
     }

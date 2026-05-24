@@ -33,6 +33,9 @@ class ReminderViewModel(app: Application) : AndroidViewModel(app) {
     val hasOnboarded: StateFlow<Boolean> = settings.hasOnboarded
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
+    val termsAccepted: StateFlow<Boolean> = settings.termsAccepted
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     // -------------------------------------------------------------------------
     // Reminder operations
     // -------------------------------------------------------------------------
@@ -108,6 +111,12 @@ class ReminderViewModel(app: Application) : AndroidViewModel(app) {
     fun saveComfortHours(start: Int, end: Int) {
         viewModelScope.launch {
             settings.saveComfortHours(start, end)
+        }
+    }
+
+    fun acceptTerms() {
+        viewModelScope.launch {
+            settings.setTermsAccepted(true)
         }
     }
 }

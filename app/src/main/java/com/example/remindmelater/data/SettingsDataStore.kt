@@ -15,6 +15,7 @@ class SettingsDataStore(private val context: Context) {
         private val KEY_COMFORT_START = intPreferencesKey("comfort_start")
         private val KEY_COMFORT_END   = intPreferencesKey("comfort_end")
         private val KEY_HAS_ONBOARDED = booleanPreferencesKey("has_onboarded")
+        private val KEY_TERMS_ACCEPTED = booleanPreferencesKey("terms_accepted")
     }
 
     val comfortStart: Flow<Int> = context.dataStore.data
@@ -26,11 +27,20 @@ class SettingsDataStore(private val context: Context) {
     val hasOnboarded: Flow<Boolean> = context.dataStore.data
         .map { it[KEY_HAS_ONBOARDED] ?: false }
 
+    val termsAccepted: Flow<Boolean> = context.dataStore.data
+        .map { it[KEY_TERMS_ACCEPTED] ?: false }
+
     suspend fun saveComfortHours(start: Int, end: Int) {
         context.dataStore.edit { prefs ->
             prefs[KEY_COMFORT_START] = start
             prefs[KEY_COMFORT_END]   = end
             prefs[KEY_HAS_ONBOARDED] = true
+        }
+    }
+
+    suspend fun setTermsAccepted(accepted: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_TERMS_ACCEPTED] = accepted
         }
     }
 }
