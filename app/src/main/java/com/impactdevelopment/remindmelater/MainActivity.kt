@@ -11,18 +11,22 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.Create
 import androidx.compose.material3.*
@@ -39,6 +43,7 @@ import com.impactdevelopment.remindmelater.receiver.NotificationActionReceiver
 import com.impactdevelopment.remindmelater.scheduler.ReminderScheduler
 import com.impactdevelopment.remindmelater.ui.components.ComfortHoursSheet
 import com.impactdevelopment.remindmelater.ui.screens.DumpScreen
+import com.impactdevelopment.remindmelater.ui.screens.MenuScreen
 import com.impactdevelopment.remindmelater.ui.screens.RemindersScreen
 import com.impactdevelopment.remindmelater.ui.screens.TermsAndConditionsScreen
 import com.impactdevelopment.remindmelater.ui.theme.RemindMeLaterTheme
@@ -80,9 +85,11 @@ class MainActivity : ComponentActivity() {
                 val comfortStart by vm.comfortStart.collectAsState()
                 val comfortEnd   by vm.comfortEnd.collectAsState()
                 val termsAccepted by vm.termsAccepted.collectAsState()
+                val backgroundAnimationsEnabled by vm.backgroundAnimationsEnabled.collectAsState()
 
                 var selectedTab by remember { mutableStateOf(Tab.DUMP) }
                 var prefillText by remember { mutableStateOf<String?>(null) }
+                var showMenu by remember { mutableStateOf(false) }
 
                 // When arriving from a reschedule action, switch to Dump tab
                 LaunchedEffect(isReschedule, rescheduleId) {
@@ -93,40 +100,67 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                if (!termsAccepted) {
-                    TermsAndConditionsScreen(
-                        onAgree = { vm.acceptTerms() },
-                        onCancel = { finish() }
-                    )
-                } else if (!hasOnboarded) {
-                    // Onboarding: if first launch, show comfort hours sheet before anything else
-                    ComfortHoursSheet(
-                        initialStart = comfortStart,
-                        initialEnd   = comfortEnd,
-                        onDismiss    = { /* intentionally no-op: user must save before proceeding */ },
-                        onSave       = { s, e -> vm.saveComfortHours(s, e) }
-                    )
-                } else {
-                    Scaffold(
-                        bottomBar = {
-                            PremiumBottomBar(
-                                selectedTab = selectedTab,
-                                onTabSelected = { selectedTab = it }
-                            )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    if (!termsAccepted) {
+                        TermsAndConditionsScreen(
+                            onAgree = { vm.acceptTerms() },
+                            onCancel = { finish() }
+                        )
+                    } else if (!hasOnboarded) {
+                        // Onboarding: if first launch, show comfort hours sheet before anything else
+                        ComfortHoursSheet(
+                            initialStart = comfortStart,
+                            initialEnd   = comfortEnd,
+                            onDismiss    = { /* intentionally no-op: user must save before proceeding */ },
+                            onSave       = { s, e -> vm.saveComfortHours(s, e) }
+                        )
+                    } else {
+                        Scaffold(
+                            bottomBar = {
+                                PremiumBottomBar(
+                                    selectedTab = selectedTab,
+                                    onTabSelected = { selectedTab = it }
+                                )
+                            }
+                        ) { innerPadding ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(innerPadding)
+                            ) {
+                                when (selectedTab) {
+                                    Tab.DUMP -> DumpScreen(
+                                        viewModel         = vm,
+                                        prefillText       = prefillText,
+                                        onPrefillConsumed = { prefillText = null },
+                                        backgroundAnimationEnabled = backgroundAnimationsEnabled,
+                                        modifier          = Modifier.fillMaxSize()
+                                    )
+                                    Tab.REMINDERS -> RemindersScreen(
+                                        viewModel = vm,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+
+                                MenuPillButton(
+                                    onClick = { showMenu = true },
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .statusBarsPadding()
+                                        .padding(top = 8.dp, end = 12.dp)
+                                )
+                            }
                         }
-                    ) { innerPadding ->
-                        when (selectedTab) {
-                            Tab.DUMP -> DumpScreen(
-                                viewModel        = vm,
-                                prefillText      = prefillText,
-                                onPrefillConsumed = { prefillText = null },
-                                modifier         = Modifier.padding(innerPadding)
-                            )
-                            Tab.REMINDERS -> RemindersScreen(
-                                viewModel = vm,
-                                modifier  = Modifier.padding(innerPadding)
-                            )
-                        }
+                    }
+
+                    if (showMenu) {
+                        MenuScreen(
+                            onClose = { showMenu = false },
+                            backgroundAnimationsEnabled = backgroundAnimationsEnabled,
+                            onBackgroundAnimationsChange = {
+                                vm.setBackgroundAnimationsEnabled(it)
+                            }
+                        )
                     }
                 }
             }
@@ -225,6 +259,43 @@ private fun PremiumNavItem(
                 text = if (selected) "•" else "",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+@Composable
+private fun MenuPillButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(999.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+        tonalElevation = 2.dp,
+        shadowElevation = 8.dp,
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+        ),
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Menu,
+                contentDescription = "Menu",
+                tint = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "Menu",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }

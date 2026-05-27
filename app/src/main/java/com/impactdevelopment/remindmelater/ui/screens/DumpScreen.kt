@@ -84,6 +84,7 @@ fun DumpScreen(
     viewModel: ReminderViewModel,
     prefillText: String?,
     onPrefillConsumed: () -> Unit,
+    backgroundAnimationEnabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     var text by remember { mutableStateOf("") }
@@ -132,7 +133,11 @@ fun DumpScreen(
         modifier = modifier
             .fillMaxSize()
     ) {
-        AnimatedBackdrop(modifier = Modifier.fillMaxSize())
+        if (backgroundAnimationEnabled) {
+            AnimatedBackdrop(modifier = Modifier.fillMaxSize())
+        } else {
+            StaticBackdrop(modifier = Modifier.fillMaxSize())
+        }
 
         // squeeze: 1.0 on generous screens (≥720dp), 0.0 on tight screens (≤520dp).
         // Only paddings and the text-field shrink — preserves proportions when room exists.
@@ -398,6 +403,7 @@ fun DumpScreen(
                 Column(modifier = Modifier.align(Alignment.CenterHorizontally)) {
                     Spacer(Modifier.height(6.dp))
                     // TODO: Test Button, REMOVE BEFORE RELEASE
+                    /*
                     OutlinedButton(
                         onClick = { viewModel.scheduleInOneMinute(text.ifBlank { "Test reminder" }) },
                         border = BorderStroke(1.dp, Color(0xFFFF6B00).copy(alpha = 0.6f)),
@@ -407,6 +413,7 @@ fun DumpScreen(
                     ) {
                         Text("⚡ Test: fire in 1 min", style = MaterialTheme.typography.labelMedium)
                     }
+                    */
                 }
             }
 
@@ -618,6 +625,43 @@ private fun AnimatedBackdrop(modifier: Modifier = Modifier) {
                 colors.surface,
                 colors.primaryContainer.copy(alpha = 0.32f),
                 colors.secondaryContainer.copy(alpha = 0.24f)
+            ),
+            start = Offset(0f + driftX, size.height * 0.1f + driftY),
+            end = Offset(size.width - driftX, size.height * 0.9f - driftY)
+        )
+        drawRect(brush = baseGradient)
+
+        drawCircle(
+            color = colors.primary.copy(alpha = 0.14f + glow),
+            center = Offset(size.width * 0.2f + driftX, size.height * 0.2f + driftY),
+            radius = size.minDimension * 0.45f
+        )
+        drawCircle(
+            color = colors.tertiary.copy(alpha = 0.12f + (glow * 0.6f)),
+            center = Offset(size.width * 0.9f - driftX, size.height * 0.15f - driftY),
+            radius = size.minDimension * 0.28f
+        )
+        drawCircle(
+            color = colors.secondary.copy(alpha = 0.1f + (glow * 0.5f)),
+            center = Offset(size.width * 0.85f + driftY, size.height * 0.85f - driftX),
+            radius = size.minDimension * 0.55f
+        )
+    }
+}
+
+@Composable
+private fun StaticBackdrop(modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    val driftX = 28f
+    val driftY = -18f
+    val glow = 0.08f
+
+    Canvas(modifier = modifier) {
+        val baseGradient = Brush.linearGradient(
+            colors = listOf(
+                colors.surface,
+                colors.primaryContainer.copy(alpha = 0.28f),
+                colors.secondaryContainer.copy(alpha = 0.22f)
             ),
             start = Offset(0f + driftX, size.height * 0.1f + driftY),
             end = Offset(size.width - driftX, size.height * 0.9f - driftY)

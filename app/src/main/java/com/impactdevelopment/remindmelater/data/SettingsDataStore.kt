@@ -16,6 +16,7 @@ class SettingsDataStore(private val context: Context) {
         private val KEY_COMFORT_END   = intPreferencesKey("comfort_end")
         private val KEY_HAS_ONBOARDED = booleanPreferencesKey("has_onboarded")
         private val KEY_TERMS_ACCEPTED = booleanPreferencesKey("terms_accepted")
+        private val KEY_BG_ANIM_ENABLED = booleanPreferencesKey("bg_anim_enabled")
     }
 
     val comfortStart: Flow<Int> = context.dataStore.data
@@ -30,6 +31,9 @@ class SettingsDataStore(private val context: Context) {
     val termsAccepted: Flow<Boolean> = context.dataStore.data
         .map { it[KEY_TERMS_ACCEPTED] ?: false }
 
+    val backgroundAnimationsEnabled: Flow<Boolean> = context.dataStore.data
+        .map { it[KEY_BG_ANIM_ENABLED] ?: true }
+
     suspend fun saveComfortHours(start: Int, end: Int) {
         context.dataStore.edit { prefs ->
             prefs[KEY_COMFORT_START] = start
@@ -41,6 +45,12 @@ class SettingsDataStore(private val context: Context) {
     suspend fun setTermsAccepted(accepted: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_TERMS_ACCEPTED] = accepted
+        }
+    }
+
+    suspend fun setBackgroundAnimationsEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_BG_ANIM_ENABLED] = enabled
         }
     }
 }

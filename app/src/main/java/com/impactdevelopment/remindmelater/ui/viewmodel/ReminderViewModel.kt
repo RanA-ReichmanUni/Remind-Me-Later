@@ -36,6 +36,9 @@ class ReminderViewModel(app: Application) : AndroidViewModel(app) {
     val termsAccepted: StateFlow<Boolean> = settings.termsAccepted
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    val backgroundAnimationsEnabled: StateFlow<Boolean> = settings.backgroundAnimationsEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
     // -------------------------------------------------------------------------
     // Reminder operations
     // -------------------------------------------------------------------------
@@ -117,6 +120,12 @@ class ReminderViewModel(app: Application) : AndroidViewModel(app) {
     fun acceptTerms() {
         viewModelScope.launch {
             settings.setTermsAccepted(true)
+        }
+    }
+
+    fun setBackgroundAnimationsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settings.setBackgroundAnimationsEnabled(enabled)
         }
     }
 }

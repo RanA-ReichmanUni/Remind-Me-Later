@@ -40,6 +40,9 @@ android {
         compose = true
         buildConfig = true
     }
+    lint {
+        disable.add("InvalidFragmentVersionForActivityResult")
+    }
 }
 
 dependencies {
@@ -73,4 +76,5 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
 }

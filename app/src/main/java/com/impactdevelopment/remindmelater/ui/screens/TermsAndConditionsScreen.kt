@@ -43,12 +43,13 @@ fun TermsAndConditionsScreen(
     BackHandler(onBack = onCancel)
 
     val context = LocalContext.current
-    val link = remember { "https://example.com/terms" }
+    val termsLink = remember { "https://doc-hosting.flycricket.io/remind-me-later-dump-forget-terms/066e5c03-811f-465e-9d68-99caef56d362/terms" }
+    val privacyLink = remember { "https://doc-hosting.flycricket.io/remind-me-later-dump-forget/26727942-d484-494a-a3b7-212119dfbe13/privacy" }
     val linkColor = MaterialTheme.colorScheme.primary
     val annotated = remember(linkColor) {
         buildAnnotatedString {
             append("By using this app, you agree to the ")
-            pushStringAnnotation(tag = "link", annotation = link)
+            pushStringAnnotation(tag = "link", annotation = termsLink)
             withStyle(
                 SpanStyle(
                     color = linkColor,
@@ -56,7 +57,19 @@ fun TermsAndConditionsScreen(
                     textDecoration = TextDecoration.Underline
                 )
             ) {
-                append("Terms and Privacy Policy")
+                append("Terms and Conditions")
+            }
+            pop()
+            append(" and ")
+            pushStringAnnotation(tag = "link", annotation = privacyLink)
+            withStyle(
+                SpanStyle(
+                    color = linkColor,
+                    fontWeight = FontWeight.SemiBold,
+                    textDecoration = TextDecoration.Underline
+                )
+            ) {
+                append("Privacy Policy")
             }
             pop()
             append(".")
@@ -129,7 +142,7 @@ fun TermsAndConditionsScreen(
                             onClick = onAgree,
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Agree")
+                            Text("I Read and Agreed")
                         }
                     }
                 }
